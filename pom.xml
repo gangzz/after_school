@@ -6,5 +6,37 @@
   <packaging>pom</packaging>
   <modules>
   	<module>afterschool_concurrent</module>
+  	<module>afterschool_jpa</module>
+  	<module>afterschool_webmagic</module>
+  	<module>afterschool_redis</module>
   </modules>
+  
+  <repositories>
+  	<repository>
+  		<id>public</id>
+  		<name>public group</name>
+  		<url>http://localhost:8081/nexus/content/groups/public/</url>
+  		<releases>
+  			<enabled>true</enabled>
+  			<updatePolicy>never</updatePolicy>
+  		</releases>
+  	</repository>
+  	<repository>
+  		<id>snapshots</id>
+  		<name>snapshots</name>
+  		<url>http://localhost:8081/nexus/content/repositories/snapshots/</url>
+  		<releases>
+  			<enabled>true</enabled>
+  			<updatePolicy>never</updatePolicy>
+  		</releases>
+  	</repository>
+  </repositories>
+  
+  <distributionManagement>
+  	<snapshotRepository>
+  		<id>snapshots</id>
+  		<name>snapshots</name>
+  		<url>http://localhost:8081/nexus/content/repositories/snapshots/</url>
+  	</snapshotRepository>
+  </distributionManagement>
 </project>
