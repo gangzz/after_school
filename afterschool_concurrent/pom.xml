@@ -9,5 +9,6 @@
   <packaging>pom</packaging>
   <modules>
   	<module>afterschool_jpa_simple</module>
+  	<module>afterschool_concurrent_block</module>
   </modules>
 </project>

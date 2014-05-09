@@ -3,21 +3,17 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.zhirenguo</groupId>
-		<artifactId>afterschool</artifactId>
+		<artifactId>afterschool_concurrent</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
-	<artifactId>afterschool_redis</artifactId>
+	<artifactId>afterschool_cuncurrent_block</artifactId>
 
 	<dependencies>
-		<dependency>
-			<groupId>redis.clients</groupId>
-			<artifactId>jedis</artifactId>
-			<version>2.4.2</version>
-		</dependency>
-		<dependency>
-			<groupId>com.zhirenguo</groupId>
-			<artifactId>afterschool_test</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
+
+	<dependency>
+		<groupId>com.zhirenguo</groupId>
+		<artifactId>afterschool_test</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</dependency>
 	</dependencies>
 </project>

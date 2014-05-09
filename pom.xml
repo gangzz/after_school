@@ -9,6 +9,7 @@
   	<module>afterschool_jpa</module>
   	<module>afterschool_webmagic</module>
   	<module>afterschool_redis</module>
+  	<module>afterschool_test</module>
   </modules>
   
 </project>
