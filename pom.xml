@@ -10,6 +10,7 @@
   	<module>afterschool_webmagic</module>
   	<module>afterschool_redis</module>
   	<module>afterschool_test</module>
+  	<module>afterschool_common</module>
   </modules>
   
 </project>

@@ -19,5 +19,10 @@
 			<artifactId>afterschool_test</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>com.zhirenguo</groupId>
+			<artifactId>afterschool_common</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 </project>

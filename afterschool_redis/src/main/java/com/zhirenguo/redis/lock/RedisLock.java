@@ -1,30 +1,40 @@
 package com.zhirenguo.redis.lock;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
-import com.zhirenguo.redis.SimpleClient;
+import com.zhirenguo.redis.RedisPoolHolder;
+import com.zhirenguo.util.uuid.UUIDUtil;
 
 public class RedisLock {
 	
-	private String Id;
-	private String lockPrefix = "lock:";
-	private JedisPool pool;
+	private static final int DEAFULT_MAX_LOCKED_TIME = 10;
+	private static final String SPLITTER = "#";
 	
-	public RedisLock(String id) {
-		this.Id = id;
+	private final String lockId;
+	private String lockPrefix = "lock:";
+	private String uuidDistinction;
+	private int lockedTime = DEAFULT_MAX_LOCKED_TIME;
+	protected RedisPoolHolder poolHolder;
+	
+	public RedisLock(String lockId, RedisPoolHolder holder) {
+		this.lockId = lockId;
+		uuidDistinction = UUIDUtil.getUUIDStr();
+		this.poolHolder = holder;
 	}
 
-	public synchronized boolean tryLock(){
+	public boolean tryLock(){
 		Jedis resource = null;
 		try{
-			resource = getPool().getResource();
+			resource = poolHolder.getResource();
 			Long threadId = Thread.currentThread().getId();
 			boolean locked = (resource.setnx(getKey(), threadId.toString()) != 0);
+			if(locked){
+				resource.expire(getKey(), lockedTime);
+			}
 			return locked;
 		} finally {
 			if(resource != null){
-				getPool().returnResource(resource);
+				poolHolder.returnResource(resource);
 			}
 		}
 		
@@ -33,7 +43,7 @@ public class RedisLock {
 	public boolean unlock(){
 		Jedis resource = null;
 		try{
-			resource = getPool().getResource();
+			resource = poolHolder.getResource();
 			Long threadId = Thread.currentThread().getId();
 			boolean locked = (threadId.toString().equals(resource.get(getKey() )));
 			if(locked){
@@ -41,17 +51,42 @@ public class RedisLock {
 			}
 			return false;
 		} finally {
-			getPool().returnResource(resource);
+			poolHolder.returnResource(resource);
 		}
 	}
 	
-	private String getKey(){
-		return lockPrefix + Id;
+	protected String getKey(){
+		return lockPrefix + lockId;
 	}
 	
-	public JedisPool getPool(){
-		if(pool == null)
-			pool = SimpleClient.getPool();
-		return pool;
+	protected String encodeValue(){
+		String value = uuidDistinction + SPLITTER + Thread.currentThread().getId();
+		return value;
 	}
+	
+	protected String[] decodeValue(String value){
+		return value.split(SPLITTER);
+	}
+
+	public String getLockId() {
+		return lockId;
+	}
+
+	public int getLockedTime() {
+		return lockedTime;
+	}
+
+	public void setLockedTime(int lockedTime) {
+		this.lockedTime = lockedTime;
+	}
+
+	public RedisPoolHolder getPoolHolder() {
+		return poolHolder;
+	}
+
+	public void setPoolHolder(RedisPoolHolder poolHolder) {
+		this.poolHolder = poolHolder;
+	}
+	
+	
 }
