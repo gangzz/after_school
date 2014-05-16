@@ -11,10 +11,12 @@ import com.zhirenguo.test.UnitTestUtil;
 public class RedisLockTest {
 
 	private RedisLock lock = null;
+	private RedisPoolHolder holder = null;
 	
 	@Before
 	public void initPerTest(){
-		lock = new RedisLock("1", new RedisPoolHolder());
+		holder = new RedisPoolHolder();
+		lock = new RedisLock("test1",holder);
 	}
 	
 	@Test
@@ -64,6 +66,37 @@ public class RedisLockTest {
 		Assert.assertEquals(true, locked);
 		Assert.assertEquals(true, unlockPerformed);
 	}
+	
+	/*
+	 * 娴嬭瘯鍚屼竴涓嚎绋嬪鍚僼ryLock锛岄鏈熺粨鏋滃厑璁稿娆ock
+	 */
+	@Test
+	public void testSameThreadMultiLock(){
+		boolean locked = lock.tryLock();
+		Assert.assertEquals(true, locked);
+		locked = lock.tryLock();
+		Assert.assertEquals(true, locked);
+		locked = lock.tryLock();
+		Assert.assertEquals(true, locked);
+		lock.unlock();
+	}
+	
+	/*
+	 * 妯℃嫙涓嶅悓杩涚▼鐨則hread鎷ユ湁鐩稿悓id锛岄鏈熺粨鏋滀笉鍏佽閿�
+	 */
+	@Test
+	public void testDifferenProcess(){
+		RedisLock rlock = new RedisLock("test1",holder);
+		boolean locked = lock.tryLock();
+		Assert.assertEquals(true, locked);
+		locked = rlock.tryLock();
+		Assert.assertEquals(false, locked);
+		locked = rlock.unlock();
+		Assert.assertEquals(false, locked);
+		lock.unlock();
+	}
+	
+	
 	
 	
 	

@@ -1,24 +1,26 @@
 package com.zhirenguo.redis.lock;
 
+import java.util.UUID;
+
+import org.apache.commons.lang.StringUtils;
+
 import redis.clients.jedis.Jedis;
 
 import com.zhirenguo.redis.RedisPoolHolder;
-import com.zhirenguo.util.uuid.UUIDUtil;
 
 public class RedisLock {
 	
-	private static final int DEAFULT_MAX_LOCKED_TIME = 10;
+	private static final int DEAFULT_MAX_LOCKED_TIME = 100;
 	private static final String SPLITTER = "#";
+	public static final String LOCK_PREFIX = "RedisLck";
 	
-	private final String lockId;
-	private String lockPrefix = "lock:";
-	private String uuidDistinction;
+	private final String lockId, uuidDistinction;
 	private int lockedTime = DEAFULT_MAX_LOCKED_TIME;
 	protected RedisPoolHolder poolHolder;
 	
 	public RedisLock(String lockId, RedisPoolHolder holder) {
 		this.lockId = lockId;
-		uuidDistinction = UUIDUtil.getUUIDStr();
+		uuidDistinction = UUID.randomUUID().toString();
 		this.poolHolder = holder;
 	}
 
@@ -26,8 +28,12 @@ public class RedisLock {
 		Jedis resource = null;
 		try{
 			resource = poolHolder.getResource();
-			Long threadId = Thread.currentThread().getId();
-			boolean locked = (resource.setnx(getKey(), threadId.toString()) != 0);
+			boolean locked = (resource.setnx(getKey(), encodeValue()) != 0);
+			//already locked by a thread
+			if(!locked){
+				String value = resource.get(getKey());
+				locked = alreadyLocked(value);
+			}
 			if(locked){
 				resource.expire(getKey(), lockedTime);
 			}
@@ -44,8 +50,8 @@ public class RedisLock {
 		Jedis resource = null;
 		try{
 			resource = poolHolder.getResource();
-			Long threadId = Thread.currentThread().getId();
-			boolean locked = (threadId.toString().equals(resource.get(getKey() )));
+			String value = resource.get(getKey());
+			boolean locked = alreadyLocked(value);
 			if(locked){
 				return resource.del(getKey()) == 1;
 			}
@@ -56,17 +62,33 @@ public class RedisLock {
 	}
 	
 	protected String getKey(){
-		return lockPrefix + lockId;
+		return LOCK_PREFIX + SPLITTER + lockId;
 	}
 	
 	protected String encodeValue(){
 		String value = uuidDistinction + SPLITTER + Thread.currentThread().getId();
 		return value;
 	}
-	
+	/**
+	 * 
+	 * @param value
+	 * @return {uuid, threadId}
+	 */
 	protected String[] decodeValue(String value){
 		return value.split(SPLITTER);
 	}
+	
+	protected boolean alreadyLocked(String value){
+		if(StringUtils.isBlank(value)){
+			return false;
+		}
+		String[] result = decodeValue(value);
+		if(uuidDistinction.equals(result[0])){
+			return Thread.currentThread().getId() == Long.parseLong(result[1]);
+		}
+		return false;
+	}
+	
 
 	public String getLockId() {
 		return lockId;

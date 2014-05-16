@@ -1,20 +1,31 @@
 package com.zhirengguo.redis.lock;
 
-import org.junit.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.BlockJUnit4ClassRunner;
 
 import com.zhirenguo.redis.RedisPoolHolder;
 import com.zhirenguo.redis.lock.BlockableRedisLock;
+import com.zhirenguo.redis.lock.BlockableRedisLockManager;
 import com.zhirenguo.test.UnitTestUtil;
 
+@RunWith(BlockJUnit4ClassRunner.class)
 public class BlockableRedisLockTest {
 
-	private BlockableRedisLock lock ;
+	private BlockableRedisLock lock1;
+	private BlockableRedisLock lock2;
 	
 	@Before
 	public void init(){
-		lock = new BlockableRedisLock("1", "channel1", new RedisPoolHolder());
+		RedisPoolHolder holder = new RedisPoolHolder();
+		BlockableRedisLockManager manager = new BlockableRedisLockManager(holder);
+		lock1 = manager.newLock("test1");
+		lock2 = manager.newLock("test2");
 	}
 	
 	@Test
@@ -24,13 +35,13 @@ public class BlockableRedisLockTest {
 			
 			public void run() {
 				while(!lockStatus.isStopped()){
-					lock.lock();
-					Assert.assertEquals(false, lockStatus.isLocked());
+					lock1.lock();
+					assertEquals(false, lockStatus.isLocked());
 					lockStatus.setLocked(true);
 					UnitTestUtil.sleepRandMillis(400);
 					lockStatus.incrementValue();
 					lockStatus.setLocked(false);
-					lock.unlock();
+					lock1.unlock();
 					UnitTestUtil.sleepMillis(100);
 				}
 			}
@@ -43,28 +54,53 @@ public class BlockableRedisLockTest {
 		th2.start();
 		th3.start();
 		UnitTestUtil.sleep(5);
-		Assert.assertEquals(true, lockStatus.getValue() > 9);
+		assertEquals(true, lockStatus.getValue() > 9);
 		lockStatus.setStopped(true);
 		UnitTestUtil.sleep(1);
 	}
 	
-	@Test(expected=RuntimeException.class)
+	@Test
 	public void testExpire(){
-		final LockStatus lockStatus = new LockStatus();
-		lock.setLockedTime(2);
+		LockStatus lockStatus = new LockStatus();
+		lock1.setLockedTime(2);
+		Thread th = createLockThread(lockStatus);
+		lock1.lock();
+		th.start();
+		UnitTestUtil.sleep(20);
+		assertEquals(true, lockStatus.isLocked());
+		assertFalse(lock1.unlock());
+	}
+	
+	@Test
+	public void testMoreThanOneLock(){
+		LockStatus lockStatus1 = new LockStatus();
+		LockStatus lockStatus2 = new LockStatus();
+		Thread th1 = createLockThread(lockStatus1);
+		Thread th2 = createLockThread(lockStatus2);
+		lock1.lock();
+		lock2.lock();
+		th1.start();
+		th2.start();
+		assertFalse(lockStatus1.isLocked());
+		assertFalse(lockStatus2.isLocked());
+		lock1.unlock();
+		UnitTestUtil.sleepMillis(100);
+		assertTrue(lockStatus1.isLocked());
+		lock2.unlock();
+		UnitTestUtil.sleepMillis(100);
+		assertTrue(lockStatus2.isLocked());
+	}
+	
+	private Thread createLockThread(final LockStatus lockStatus){
 		Thread th = new Thread(new Runnable() {
 			
 			public void run() {
-				lock.lock();
+				lock1.lock();
 				lockStatus.setLocked(true);
-				lock.unlock();
+				lock1.unlock();
 			}
 		}, "RedisLockTestThread");
-		lock.lock();
-		th.start();
-		UnitTestUtil.sleep(3);
-		Assert.assertEquals(true, lockStatus.isLocked());
-		lock.unlock();
+		return th;
 	}
 	
 	private class LockStatus {
